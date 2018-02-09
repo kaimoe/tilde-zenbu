@@ -1,0 +1,19 @@
+<html>
+  <body>
+    <div style="text-align:center">
+      <form ref='uploadForm'
+        id='uploadForm'
+        action='/upload'
+        method='post'
+        encType="multipart/form-data">
+          <input type="file" name="file" multiple/>
+          <input type="submit" value="Upload!" />
+        </form>
+        <select name="mood" form="uploadForm">
+          <option value="mad">mad</option>
+          <option value="sad">sad</option>
+          <option value="smad">smad</option>
+        </select>
+      </div>
+  </body>
+</html>

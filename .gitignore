@@ -1,0 +1,12 @@
+config.json
+original.html
+*.txt
+*.exe
+log
+*.png
+*.jpg
+test.*
+/node_modules/
+*.html
+!/js/src/index.html
+*.css
