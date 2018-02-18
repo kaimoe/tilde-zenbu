@@ -1,11 +1,14 @@
 //the converter tool, turns the plaintext posts into formatted html
 //and compiles them all to the full index
+
+//usage: 	main add filename music(optional) musicurl(optional)
+//				main compile
 package main
 
 import (
 	"bufio"
 	"fmt"
-	"ioutil"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -22,30 +25,33 @@ var (
 	}
 	filename, out, postname = "", "", ""
 	i, comm                 = 0, false
-	timestamp               = time.Now().Format("2006-01-02-15-04")
+	t                       = time.Now()
+	timestamp               = t.Format("2006-01-02-15-04")
 )
 
 func main() {
 	if len(os.Args) < 2 {
 		throw(0, "insufficient arguments")
 	}
-	switch os.Args[1]  {
+	switch os.Args[1] {
 	case "add":
 		if len(os.Args) < 3 {
-			throw(0, "insufficient arguments")
+			throw(0, "insufficient arguments for case add")
 		}
-		filename, postname = strings.Replace(os.Args[2], ".txt", "", 1), strings.Replace(filename, " ", "-", -1)
+		filename = strings.Replace(os.Args[2], ".txt", "", 1)
+		postname = strings.Replace(filename, " ", "-", -1)
+		fmt.Print(filename, postname)
 		newPost()
 	case "compile":
 		compile()
 	default:
-		throw(0, "unrecognized argument: " + os.Args[1])
+		throw(0, "unrecognized argument: "+os.Args[1])
 	}
 
 } //end of main
 
 func newPost() {
-	file, err := os.Open("in/" + filename + ".txt")
+	file, err := os.Open("text/" + filename + ".txt")
 	check(err)
 	scanner := bufio.NewScanner(file)
 
@@ -118,14 +124,24 @@ func addsp(line string, sp string) { //add special line to output file, handling
 }
 
 func write(out string) { //create modified file
-	time1 := time.Now().Format("2006-01-02 15:04")
-	time2 := time.Now().Format("Jan 2 2006")
+	time1 := t.Format("2006-01-02 15:04")
+	time2 := t.Format("Jan 2 2006")
 
 	if !strings.HasSuffix(out, "</p>") { //ensure last <p> closed
 		out = out + "</p>"
 	}
-	out = "<div>\n<a name=\"" + postname + `" href="#` + postname + `"><time class="posttime" datetime="` + time1 + `">` + time2 + "</time></a>\n" + out + "\n</div>\n\n"
+	out = "<div>\n<a name=\"" + postname + `" href="#` + postname + `"><time class="posttime" datetime="` + time1 + `">` + time2 + "</time></a>\n" + out + "\n"
+	if len(os.Args) > 3 {
+		listen := "<p class=\"listening\">"
+		if len(os.Args) == 4 {
+			listen = listen + os.Args[3]
+		} else if len(os.Args) == 5 {
+			listen = listen + "<a href=\"" + os.Args[4] + "\">" + os.Args[3] + "</a>"
+		}
+		out = out+ listen + "</p>"
+	}
 
+	out = out + "\n</div>\n\n"
 	file, err := os.Create("posts/" + timestamp + ".txt") //create output file
 	check(err)
 	defer file.Close()
@@ -134,7 +150,7 @@ func write(out string) { //create modified file
 	check(err)
 }
 
-func log() { //add new file to log NOTE: for posperity, not currently in use
+func log() { //add new file to log
 	file, err := os.OpenFile("log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	check(err)
 	defer file.Close()
@@ -143,7 +159,7 @@ func log() { //add new file to log NOTE: for posperity, not currently in use
 	check(err)
 }
 
-func load() []byte { //load all posts from log in reverse-chronological order into one string
+func load() []byte { //load all posts from log in reverse-chronological order into one buffer
 	file, err := os.Open("log")
 	check(err)
 	scanner := bufio.NewScanner(file)
@@ -161,12 +177,12 @@ func load() []byte { //load all posts from log in reverse-chronological order in
 	check(scanner.Err())
 	file.Close()
 
-	master := []byte(out) //make master buffer
+	master := []byte{} //make master buffer
 
-	for i, post := range posts { //add each file's contents
-		text, err := ioutil.ReadFile("posts/" + post + ".txt")
+	for _, post := range posts { //add each file's contents
+		text, err := ioutil.ReadFile("posts/" + post)
 		check(err)
-		master = append(master, text)
+		master = append(master, text...)
 	}
 	return master
 }
@@ -179,7 +195,7 @@ func compile() { //merge all posts and generate index
 	master = append(text, master...)
 	text, err = ioutil.ReadFile("index2.html")
 	check(err)
-	master = append(master, text)
+	master = append(master, text...)
 
 	file, err := os.Create("out/index.html")
 	check(err)

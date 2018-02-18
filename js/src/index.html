@@ -2,18 +2,39 @@
   <body>
     <div style="text-align:center">
       <form ref='uploadForm'
-        id='uploadForm'
-        action='/upload'
-        method='post'
-        encType="multipart/form-data">
-          <input type="file" name="file" multiple/>
-          <input type="submit" value="Upload!" />
-        </form>
-        <select name="mood" form="uploadForm">
-          <option value="mad">mad</option>
-          <option value="sad">sad</option>
-          <option value="smad">smad</option>
-        </select>
-      </div>
+			id='uploadForm'
+      action='/upload'
+      method='post'
+      encType="multipart/form-data">
+        <input type="file" name="file" multiple/><br><br>
+
+				Listening to: <input type="text" name="music" value=""><br>
+				Link: <input type="text" name="musicurl" value=""><br><br>
+
+				<input type="checkbox" id="soft" name="soft" value="true">
+				<label for="soft">Soft upload (don't store or call main)</label><br><br>
+
+        <input type="submit" value="Upload!" />
+      </form>
+			<br><br><br>
+			Special:
+			<form ref='specialForm'
+      id='specialForm'
+      action='/special'
+      method='post'
+      encType="multipart/form-data">
+				<br>
+
+				<input type="checkbox" id="compile" name="compile" value="true">
+				<label for="compile">Compile & send</label><br><br>
+
+      	<input type="submit" value="Send" />
+      </form>
+      <!--<select name="mood" form="uploadForm">
+        <option value="mad">mad</option>
+        <option value="sad">sad</option>
+        <option value="smad">smad</option>
+      </select>-->
+    </div>
   </body>
 </html>
