@@ -17,11 +17,10 @@ See it [here!](https://tilde.town/~sacredpixel)
 ## To-Do
 
 ### General:
-* Add sample config.json
 * Make conversion/post templates more presentable and add to repo
 
 ### Converter:
-* Add support for <ul> lists
+* Add support for ul lists
 * Do something to help with links (which are not currently handled in any way)
 * Less- and greater-than symbols currently break, fix and add way to escape special characters
 * Write capability for registering posts under different categories (to be done after appropriate CSS is written), or for different pages
