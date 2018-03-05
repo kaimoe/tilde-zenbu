@@ -1,16 +1,21 @@
 //the converter tool, turns the plaintext posts into formatted html
 //and compiles them all to the full index
 
-//usage: 	main add filename music(optional) musicurl(optional)
-//				main compile
+//usage: 	main -a add -f filename -m music(optional) -murl musicurl(optional)
+//				main -a update -f filename -m music(optional) -murl musicurl(optional)
+//				main -a exists -f filename
+//				main -a compile
+//flags:	--nolog
 package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,51 +28,68 @@ var (
 		"q>":  "blockquote>",
 		"br>": "hr>",
 	}
-	filename, out, postname = "", "", ""
-	i, comm                 = 0, false
-	t                       = time.Now()
-	timestamp               = t.Format("2006-01-02-15-04")
+	actions               = []string{"add", "update", "exists", "compile"}
+	action, filename, out = "", "", ""
+	music, musicurl       = "", ""
+	comm, nolog				    = false, false
+	i                     = 0
+	t                     = time.Now()
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		throw(0, "insufficient arguments")
-	}
-	switch os.Args[1] {
+	flag.StringVar(&action, "a", "", "action to execute out of: "+strings.Join(actions, ", "))
+	flag.StringVar(&filename, "f", "", "filename to operate on")
+	flag.StringVar(&music, "m", "", "text to be inputted in Now Listening field")
+	flag.StringVar(&musicurl, "murl", "", "url to be applied in Now Listening field")
+	flag.BoolVar(&nolog, "nolog", false, "don't add file to log")
+	flag.Parse()
+
+	switch action {
 	case "add":
-		if len(os.Args) < 3 {
-			throw(0, "insufficient arguments for case add")
+		if filename == "" {
+			throw(0, "missing flag filename")
 		}
-		filename = strings.Replace(os.Args[2], ".txt", "", 1)
-		postname = strings.Replace(filename, " ", "-", -1)
-		fmt.Print(filename, postname)
-		newPost()
+		setFilename()
+		formatPost()
+		log()
+		compile()
+	case "update":
+		if filename == "" {
+			throw(0, "missing flag filename")
+		}
+		setFilename()
+		updatePost()
+		compile()
+	case "exists":
+		if fetchEntry(filename) == nil { //check for post in log
+			throw(0, "could not locate entry "+filename)
+		} else {
+			fmt.Println("file exists")
+		}
 	case "compile":
 		compile()
 	default:
-		throw(0, "unrecognized argument: "+os.Args[1])
+		fmt.Printf("Unrecognized -a value: %s\nValid values: %s\n", action, strings.Join(actions, " "))
+		os.Exit(1)
 	}
-
 } //end of main
 
-func newPost() {
+func formatPost() {
 	file, err := os.Open("text/" + filename + ".txt")
 	check(err)
 	scanner := bufio.NewScanner(file)
 
 	scanner.Scan()
-	add("<h2>" + scanner.Text() + "</h2>") //add title
+	addLine("<h2>" + scanner.Text() + "</h2>") //add title
 	scanner.Scan()
 
-	for scanner.Scan() { //main scanner loop
+	for ; scanner.Scan(); i++ { //main scanner loop
 		line := scanner.Text()
-		i++
-		//TODO: implement <ul>
 
 		sp := re.FindStringSubmatch(line)
 		switch {
 		case line == "":
-			add("</p>")
+			addLine("</p>")
 			comm = false
 			continue
 		case sp != nil:
@@ -84,82 +106,127 @@ func newPost() {
 			line = strings.Replace(line, "</"+key, "</"+val, -1)
 		}
 
-		add(line)
+		addLine(line)
 	} //end of file formatting
 
 	check(scanner.Err())
 
 	file.Close()
 	write(out) //write formatted post to file
-	log()      //add post to log
-	compile()  //produce updated index.html
 }
 
-func add(line string) { //add line to output file
-	out = out + line + "\n"
+func updatePost() {
+	entry := fetchEntry(filename)
+
+	i, err := strconv.ParseInt(entry[1], 10, 64) //get post time
+	check(err)
+	t = time.Unix(i, 0)
+	fmt.Printf("parsed time %s\n", t.String())
+
+	if music == "" {
+		music = entry[2]
+		musicurl = entry[3]
+	}
+
+	formatPost()
+}
+
+func addLine(line string) { //add line to output file
+	add(line + "\n")
 }
 
 func addsp(line string, sp string) { //add special line to output file, handling first
 	switch sp {
 	case "h":
-		line = "<h3>" + strings.TrimPrefix(line, "<h>") + "</h3>"
+		line = "<h3>" + strings.TrimPrefix(line, "<h> ") + "</h3>"
 	case "add":
 		line = `<p class="addendum">` + strings.TrimPrefix(line, "<add>")
 	case "img":
 		args := strings.Split(line, " ")[1:3]   //get imgname and position
 		texts := strings.Split(line, " \"")[1:] //get alt and title texts
+		title := ""
 
-		line = `src="` + "img/" + args[0] + `" alt="` + texts[0] + ` title="` + texts[1] + ">"
+		if len(texts) == 1 {
+			title = texts[0]
+		} else {
+			title = texts[1]
+		}
+		line = `src="` + "zenbu/image/" + args[0] + `" alt="` + texts[0] + ` title="` + title + ">"
 
 		if args[1] == "center" {
 			line = `<p><div class="c"><img ` + line + "</div>"
 		} else if args[1] == "right" || args[1] == "left" {
 			line = `<p class="f-clear"><img class="f-` + args[1] + ` fancy" ` + line
 		} else {
-			throw(i, "img align entry invalid")
+			throw(i, "img align entry invalid. Proper syntax: <img> image.jpg \"alt text\"")
 		}
 		comm = true
 	}
-	out = out + line + "\n"
+	add(line + "\n")
 }
 
 func write(out string) { //create modified file
+	timestamp := strconv.FormatInt(t.Unix(), 10)
 	time1 := t.Format("2006-01-02 15:04")
 	time2 := t.Format("Jan 2 2006")
 
-	if !strings.HasSuffix(out, "</p>") { //ensure last <p> closed
+	if !strings.HasSuffix(out, "</p>\n") { //ensure last <p> closed
 		out = out + "</p>"
 	}
-	out = "<div>\n<a name=\"" + postname + `" href="#` + postname + `"><time class="posttime" datetime="` + time1 + `">` + time2 + "</time></a>\n" + out + "\n"
-	if len(os.Args) > 3 {
+	out = "<div>\n<a name=\"" + filename + `" href="#` + filename + `" title="` + filename + `"><time class="posttime" datetime="` + time1 + `">` + time2 + "</time></a>\n" + out + "\n"
+
+	if music != "" {
 		listen := "<p class=\"listening\">"
-		if len(os.Args) == 4 {
-			listen = listen + os.Args[3]
-		} else if len(os.Args) == 5 {
-			listen = listen + "<a href=\"" + os.Args[4] + "\">" + os.Args[3] + "</a>"
+		if musicurl == "" {
+			listen = listen + music
+		} else {
+			listen = listen + "<a href=\"" + musicurl + "\">" + music + "</a>"
 		}
-		out = out+ listen + "</p>"
+		out = out + listen + "</p>"
 	}
 
-	out = out + "\n</div>\n\n"
-	file, err := os.Create("posts/" + timestamp + ".txt") //create output file
-	check(err)
+	out = out + "</div>\n\n"
+
+	if _, err := os.Stat("./posts"); os.IsNotExist(err) {
+		os.Mkdir("./posts", 0755)
+	}
+	file := create("posts", timestamp+".txt") //create output file
 	defer file.Close()
 
-	_, err = file.WriteString(out) //write output file
+	_, err := file.WriteString(out) //write output file
 	check(err)
 }
 
 func log() { //add new file to log
+	if nolog {
+		return
+	}
 	file, err := os.OpenFile("log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	check(err)
 	defer file.Close()
 
-	_, err = file.WriteString(postname + "," + timestamp + "\n")
+	entry := []string{filename, strconv.FormatInt(t.Unix(), 10), music, musicurl}
+	_, err = file.WriteString(strings.Join(entry, ",") + "\n")
 	check(err)
 }
 
-func load() []byte { //load all posts from log in reverse-chronological order into one buffer
+func fetchEntry(filename string) []string { //find and return specified log entry
+	file, err := os.Open("log")
+	check(err)
+	scanner := bufio.NewScanner(file)
+	defer file.Close()
+
+	for scanner.Scan() {
+		x := strings.Split(scanner.Text(), ",")
+		if x[0] == filename {
+			return x
+		}
+	}
+	check(scanner.Err())
+	return nil
+}
+
+func loadAll() []byte { //load all posts from log in reverse-chronological order into one buffer
 	file, err := os.Open("log")
 	check(err)
 	scanner := bufio.NewScanner(file)
@@ -188,7 +255,7 @@ func load() []byte { //load all posts from log in reverse-chronological order in
 }
 
 func compile() { //merge all posts and generate index
-	master := load()
+	master := loadAll()
 
 	text, err := ioutil.ReadFile("index1.html")
 	check(err)
@@ -197,12 +264,19 @@ func compile() { //merge all posts and generate index
 	check(err)
 	master = append(master, text...)
 
-	file, err := os.Create("out/index.html")
+	if _, err := os.Stat("./out"); os.IsNotExist(err) {
+		os.Mkdir("./out", 0755)
+	}
+	file := create("out", "index.html")
 	check(err)
 	defer file.Close()
 
 	_, err = file.Write(master)
 	check(err)
+}
+
+func add(x string) { //add to output
+	out = out + x
 }
 
 func check(e error) { //for io errors
@@ -211,7 +285,26 @@ func check(e error) { //for io errors
 	}
 }
 
-func throw(i int, error string) { //i: line, error: custom string
-	fmt.Fprintln(os.Stderr, "Line %d: %s", i, error)
+func create(folder string, file string) *os.File { //create and return file, checking for directory first
+	if _, err := os.Stat("./" + folder); os.IsNotExist(err) {
+		os.Mkdir("./"+folder, 0755)
+	}
+	x, err := os.Create(folder + "/" + file) //create output file
+	check(err)
+
+	return x
+}
+
+func setFilename() {
+	filename = strings.Replace(filename, ".txt", "", 1)
+	fmt.Println(filename)
+}
+
+func throw(i int, x string) { //i: line, error: custom string
+	if i != 0 {
+		fmt.Fprintf(os.Stderr, "Line %d: %s\n", i, x)
+	} else {
+		fmt.Fprintf(os.Stderr, x+"\n")
+	}
 	os.Exit(1)
 }

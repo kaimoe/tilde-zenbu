@@ -1,8 +1,0 @@
-{
-	"tilde": {
-		"username": "username",
-		"path": "~username/public_html/"
-	},
-	"port": 8080,
-	"path": "/home/username/tilde/"
-}

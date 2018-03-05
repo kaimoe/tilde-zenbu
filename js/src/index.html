@@ -1,33 +1,50 @@
+<!DOCTYPE html>
 <html>
+	<head>
+		<meta charset="utf-8">
+		<title>tilde-zenbu upload interface</title>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"/></script>
+		<script type="text/javascript" src="index.js"></script>
+	</head>
   <body>
     <div style="text-align:center">
       <form ref='uploadForm'
 			id='uploadForm'
-      action='/upload'
-      method='post'
-      encType="multipart/form-data">
+			onsubmit="return false">
         <input type="file" name="file" multiple/><br><br>
 
 				Listening to: <input type="text" name="music" value=""><br>
 				Link: <input type="text" name="musicurl" value=""><br><br>
 
-				<input type="checkbox" id="soft" name="soft" value="true">
-				<label for="soft">Soft upload (don't store or call main)</label><br><br>
+				<input type="checkbox" id="edit" name="edit">
+				<label for="edit">Edit existing post</label><br>
+				Post: <input type="text" name="editname" value=""><br><br>
 
-        <input type="submit" value="Upload!" />
+
+				<label id="labeldry"><input type="checkbox" id="dry" name="dry">Dry run (run normally, but don't send to town)</label><br>
+
+
+				<button id="dev" type="button">Show dev options</button>
+				<label id="labelsoft" style="display: none;"><input type="checkbox" id="soft" name="soft">Soft upload (don't store or convert, for testing)</label><br>
+				<label id="labeltest" style="display: none;"><input type="checkbox" id="test" name="test">Test upload (run under test directory, implies dry)</label><br><br>
+
+        <button id="upload" type="button">Upload!</button>
       </form>
-			<br><br><br>
+			<br><br>
 			Special:
 			<form ref='specialForm'
       id='specialForm'
       action='/special'
       method='post'
+			onsubmit="return specialForm()"
       encType="multipart/form-data">
 				<br>
 
-				<input type="checkbox" id="compile" name="compile" value="true">
-				<label for="compile">Compile & send</label><br><br>
-
+				<input type="radio" name="special" value="compile" id="compile"> <label for="compile">Compile & update (for html changes)</label><br>
+				<input type="radio" name="special" value="download" id="download"> <label for="download">Download post</label>
+				<input type="text" name="download" value=""><br>
+  			<!--<input type="radio" name="special" value=""> <br>-->
+				<br>
       	<input type="submit" value="Send" />
       </form>
       <!--<select name="mood" form="uploadForm">

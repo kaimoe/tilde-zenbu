@@ -1,23 +1,30 @@
 # tilde-zenbu
 ![a zenbu, colorized](https://i.imgur.com/leuisEX.png)
 
-A JavaScript/Go project to help with formatting human-readable plaintext "blog posts" into custom html, for a tilde.town webpage
+A JavaScript/Go project to help with formatting human-readable plaintext "blog posts" into custom html, for a [tilde.town](https://tilde.town) webpage
 
 See it [here!](https://tilde.town/~sacredpixel)
 
 ## Components
 
-* [js/src/main.js](https://github.com/TheSacredPixel/tilde-zenbu/blob/master/js/src/main.js) - Serves the webpage used to collect the post text file and images, saving, verifying, serving them to the Go converter, and uploading to tilde when done
+* [js/zenbu.js](https://github.com/TheSacredPixel/tilde-zenbu/blob/master/js/zenbu.js) - Serves the webpage used to collect the post text file and images, saving, verifying, serving them to the Go converter, and uploading to tilde when done
 * [go/main.go](https://github.com/TheSacredPixel/tilde-zenbu/blob/master/go/main.go) - Handles the post formatting, keeping a chronological log of all posts, naming appropriately, and compiling all into the HTML index
 
 ## Notes
 
 * This can (currently) only run on a Linux machine, as it makes use of scp to send files to tilde.town
 
+## Usage
+
+See the [wiki page](https://github.com/TheSacredPixel/tilde-zenbu/wiki).
+
+## Changes
+
+See the [changelog](https://github.com/TheSacredPixel/tilde-zenbu/blob/master/CHANGES.md)
+
 ## To-Do
 
 ### General:
-* Make conversion/post templates more presentable and add to repo
 
 ### Converter:
 * Add support for ul lists
@@ -27,7 +34,7 @@ See it [here!](https://tilde.town/~sacredpixel)
 * Maybe split posts under different pages after a certain number (based on the lightweight nature of the page, probably unnecessary)
 
 ### Interface:
-* Write capability to manage log, edit/delete past entries, etc.
+* Write capability to manage log, delete past entries, etc.
 
 ## Contributing
 
